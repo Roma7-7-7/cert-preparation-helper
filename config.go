@@ -14,7 +14,6 @@ const defaultAWSRegion = "eu-central-1"
 
 type Config struct {
 	IsDev          bool
-	OpenAIAPIToken string
 	TelegramToken  string
 	TelegramChatID string
 }
@@ -23,9 +22,8 @@ func GetConfig() (*Config, error) {
 	if os.Getenv("ENV") == "dev" {
 		return &Config{
 			IsDev:          true,
-			OpenAIAPIToken: "openai_api_token",
-			TelegramToken:  "telegram_token",
-			TelegramChatID: "telegram_chat_id",
+			TelegramToken:  os.Getenv("TELEGRAM_TOKEN"),
+			TelegramChatID: os.Getenv("TELEGRAM_CHAT_ID"),
 		}, nil
 	}
 
@@ -48,7 +46,6 @@ func GetConfig() (*Config, error) {
 	ssmClient := ssm.New(sess, awsConfig)
 	parameters, err := ssmClient.GetParameters(&ssm.GetParametersInput{
 		Names: []*string{
-			aws.String("/certification-preparation-bot/prod/openai-api-token"),
 			aws.String("/certification-preparation-bot/prod/telegram-token"),
 			aws.String("/certification-preparation-bot/prod/telegram-chat-id"),
 		},
@@ -58,13 +55,10 @@ func GetConfig() (*Config, error) {
 		return nil, fmt.Errorf("get parameters: %w", err)
 	}
 
-	openaiAPIToken := ""
 	telegramToken := ""
 	telegramChatID := ""
 	for _, param := range parameters.Parameters {
 		switch *param.Name {
-		case "/certification-preparation-bot/prod/openai-api-token":
-			openaiAPIToken = *param.Value
 		case "/certification-preparation-bot/prod/telegram-token":
 			telegramToken = *param.Value
 		case "/certification-preparation-bot/prod/telegram-chat-id":
@@ -73,9 +67,6 @@ func GetConfig() (*Config, error) {
 	}
 
 	errs := make([]string, 0, 3)
-	if openaiAPIToken == "" {
-		errs = append(errs, "missing openai token")
-	}
 	if telegramToken == "" {
 		errs = append(errs, "missing telegram token")
 	}
@@ -88,7 +79,6 @@ func GetConfig() (*Config, error) {
 	}
 
 	return &Config{
-		OpenAIAPIToken: openaiAPIToken,
 		TelegramToken:  telegramToken,
 		TelegramChatID: telegramChatID,
 	}, nil
